@@ -42,11 +42,28 @@ func (api *Api) handleSubscribeUserToAuction(w http.ResponseWriter, r *http.Requ
 		})
 	}
 
+	api.AuctionLobby.Lock()
+	room, ok := api.AuctionLobby.Rooms[producId]
+	api.AuctionLobby.Unlock()
+
+	if !ok {
+		_ = jsonutils.Encondejson(w, r, http.StatusBadRequest, map[string]any{
+			"message": "the auction has ended",
+		})
+		return
+	}
+
 	conn, err := api.WsUpgradedr.Upgrade(w, r, nil)
 	if err != nil {
 		_ = jsonutils.Encondejson(w, r, http.StatusInternalServerError, map[string]any{
 			"message": "could not upgrade connection to a websocker protocol",
 		})
 	}
+	client := services.NewClient(room, conn, userId)
 
+	room.Register <- client
+	// go client.ReadEventLoop()
+	// go client.WriteEventLoop()
+	for {
+	}
 }
